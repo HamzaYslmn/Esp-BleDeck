@@ -2,11 +2,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Deployed to GitHub Pages under https://<user>.github.io/Esp-BLE-Web/
-// so production assets and the PWA manifest must be rooted at /Esp-BLE-Web/.
+// Deployed to GitHub Pages under https://<user>.github.io/Esp-BleDeck/
+// so production assets and the PWA manifest must be rooted at /Esp-BleDeck/.
 // Local `pnpm dev` keeps the simple root-relative base.
 const BASE = process.env.NODE_ENV === 'production'
-  ? '/Esp-BLE-Web/'
+  ? '/Esp-BleDeck/'
   : '/';
 
 export default defineConfig({
@@ -17,8 +17,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
       manifest: {
-        name: 'Esp32 BLE Relay',
-        short_name: 'Esp32 BLE',
+        name: 'Esp BleDeck',
+        short_name: 'BleDeck',
         description: 'Offline PWA to control an ESP32 over Web Bluetooth.',
         start_url: BASE,
         scope:     BASE,

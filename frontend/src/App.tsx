@@ -11,7 +11,37 @@ import { InstallButton } from './InstallButton';
 import { Settings } from './Settings';
 import { useApp } from './store';
 
-const APP_TITLE = 'Esp32 BLE';
+const APP_TITLE = 'BleDeck';
+const LOGO = `${import.meta.env.BASE_URL}icon.svg`;
+
+// MARK: icons (inline, lucide-style strokes; no icon dependency)
+function Icon({ children }: { children: React.ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+const GearIcon = () => (
+  <Icon>
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+const PencilIcon    = () => <Icon><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></Icon>;
+const CheckIcon     = () => <Icon><path d="M20 6 9 17l-5-5" /></Icon>;
+const BluetoothIcon = () => <Icon><path d="m7 7 10 10-5 5V2l5 5L7 17" /></Icon>;
+const PowerIcon     = () => <Icon><path d="M12 2v10" /><path d="M18.4 6.6a9 9 0 1 1-12.77.04" /></Icon>;
+
+function Busy({ text }: { text: string }) {
+  return (
+    <main className="center">
+      <div className="spinner" aria-hidden="true" />
+      <p className="muted">{text}</p>
+    </main>
+  );
+}
 
 async function acquireWakeLock(): Promise<WakeLockSentinel | null> {
   try {
@@ -119,7 +149,8 @@ export function App() {
     try {
       // Try silent reconnect first; fall back to chooser when blocked.
       const silent = await tryReconnect(handleClosed, id);
-      const c = silent ?? await connect(handleClosed);      await adoptConnection(c);
+      const c = silent ?? await connect(handleClosed);
+      await adoptConnection(c);
       notify(APP_TITLE, `Connected to ${c.name}`);
     } catch (e) {
       setError((e as Error).message);
@@ -140,21 +171,8 @@ export function App() {
     window.setTimeout(() => setDisconnecting(false), 3000);
   };
 
-  if (disconnecting) {
-    return (
-      <main className="center">
-        <p className="muted">Disconnecting…</p>
-      </main>
-    );
-  }
-
-  if (probing) {
-    return (
-      <main className="center">
-        <p className="muted">Reconnecting…</p>
-      </main>
-    );
-  }
+  if (disconnecting) return <Busy text="Disconnecting…" />;
+  if (probing)       return <Busy text="Reconnecting…" />;
 
   if (!conn) {
     return (
@@ -165,33 +183,36 @@ export function App() {
           aria-label="Settings"
           title="Settings"
         >
-          ⚙
+          <GearIcon />
         </button>
         <main className="center">
           <div className="welcome">
-            <h1>Esp32 BLE</h1>
-            <p>Tap a button below to start.</p>
-            {lastDevice && (
+            <img className="logo" src={LOGO} alt="" width={76} height={76} />
+            <h1>BleDeck</h1>
+            <p>Control your ESP32 over Bluetooth.<br />No app store, no cloud, no Wi-Fi.</p>
+            <div className="welcome-actions">
+              {lastDevice && (
+                <button
+                  className="primary"
+                  onClick={() => handleReconnect(lastDevice.id)}
+                  disabled={!navigator.bluetooth}
+                >
+                  <BluetoothIcon /> Reconnect to {lastDevice.name}
+                </button>
+              )}
               <button
-                className="primary"
-                onClick={() => handleReconnect(lastDevice.id)}
+                className={lastDevice ? '' : 'primary'}
+                onClick={handleScan}
                 disabled={!navigator.bluetooth}
               >
-                Reconnect to {lastDevice.name}
+                {!lastDevice && <BluetoothIcon />} Scan for devices
               </button>
-            )}
-            <button
-              className={lastDevice ? '' : 'primary'}
-              onClick={handleScan}
-              disabled={!navigator.bluetooth}
-            >
-              Scan for BLE devices
-            </button>
-            {knownDevices.length > 0 && (
-              <button onClick={() => setShowSettings(true)}>
-                Manage paired devices ({knownDevices.length})
-              </button>
-            )}
+              {knownDevices.length > 0 && (
+                <button className="ghost" onClick={() => setShowSettings(true)}>
+                  Manage paired devices ({knownDevices.length})
+                </button>
+              )}
+            </div>
             <p className="muted small">
               Looks for any nearby BLE device. ESP32 boards starting with{' '}
               <strong>{ESP_NAME_PREFIX}</strong> get a ready-made control board.
@@ -225,8 +246,11 @@ export function App() {
   return (
     <>
       <main>
-        <header className="bar">
-          <span className="bar-title">{conn.name}</span>
+        <header className="bar top">
+          <span className="bar-title">
+            <span className="live-dot" aria-hidden="true" />
+            <span className="bar-name">{conn.name}</span>
+          </span>
           <div className="bar-actions">
             {conn.hasCommandChar && (
               <button
@@ -235,11 +259,15 @@ export function App() {
                 aria-label={editing ? 'Done renaming' : 'Rename widgets'}
                 title={editing ? 'Done' : 'Rename widgets'}
               >
-                {editing ? '✓' : '✎'}
+                {editing ? <CheckIcon /> : <PencilIcon />}
               </button>
             )}
-            <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">⚙</button>
-            <button className="danger" onClick={handleDisconnect}>Disconnect</button>
+            <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings" title="Settings">
+              <GearIcon />
+            </button>
+            <button className="icon-btn danger-ghost" onClick={handleDisconnect} aria-label="Disconnect" title="Disconnect">
+              <PowerIcon />
+            </button>
           </div>
         </header>
 
@@ -250,7 +278,7 @@ export function App() {
             <p className="muted">
               Connected, but this device doesn't expose a writable
               <br />
-              <strong>ESP32-BLE</strong> command characteristic.
+              <strong>BleDeck</strong> command characteristic.
             </p>
           </section>
         )}

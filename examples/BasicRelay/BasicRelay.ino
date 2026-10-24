@@ -1,5 +1,5 @@
 /*
- * ESP32 BLE Relay - demo sketch using EspBleWeb.
+ * Esp-BleDeck - demo sketch using EspBleDeck.
  *
  * Per-widget callbacks make the sketch self-contained: each widget
  * declares what it does inline. No global string-parsing handler.
@@ -8,18 +8,20 @@
  *   relay2   ON / OFF        (digital)
  *   led      0..255 dimmer   (analog / PWM)
  *   timer1   20-min auto-off for relay1
+ *   BOOT     on-board button toggles relay1; the app follows along
  */
 
-#include <EspBleWeb.h>
+#include <EspBleDeck.h>
 
-#define DEVICE_NAME    "ESP32-BLE-Relay"
+#define DEVICE_NAME    "ESP32-BleDeck"
 #define ACTIVE_LEVEL   LOW          // active-low relay (safe on power-up)
 
 #define RELAY1_PIN     26
 #define RELAY2_PIN     25
 #define LED_PIN        2            // on-board LED for the dimmer demo
+#define BOOT_PIN       0            // on-board BOOT button (active-low)
 
-EspBleWeb ble;
+EspBleDeck ble;
 
 // MARK: per-widget handlers
 
@@ -39,6 +41,7 @@ void setup() {
   pinMode(RELAY1_PIN, OUTPUT); setRelay(RELAY1_PIN, false);
   pinMode(RELAY2_PIN, OUTPUT); setRelay(RELAY2_PIN, false);
   pinMode(LED_PIN,    OUTPUT); analogWrite(LED_PIN, 0);
+  pinMode(BOOT_PIN,   INPUT_PULLUP);
 
   ble.begin(DEVICE_NAME);
 
@@ -59,8 +62,13 @@ void loop() {
   // Arduino loop() is already a FreeRTOS task on ESP32; just service
   // the BLE bus and yield with vTaskDelay (never blocking delay()).
   ble.loop();
+
+  // Physical button -> same path as an app write, so the UI stays in sync.
+  // ponytail: falling-edge only; the 50 ms loop period is the debounce.
+  static bool wasUp = true;
+  bool up = digitalRead(BOOT_PIN);
+  if (wasUp && !up) ble.command("relay1:TOGGLE");
+  wasUp = up;
+
   vTaskDelay(pdMS_TO_TICKS(50));
-  // ~60 % idle-current saving on ESP-class radios; see
-  // https://hackaday.com/2022/10/28/esp8266-web-server-saves-60-power-with-a-1-ms-delay/
-  delay(10);
 }

@@ -1,7 +1,7 @@
 /*
- * EspBleWeb - minimal BLE command bus + widget catalog,
+ * EspBleDeck - minimal BLE command bus + widget catalog,
  * paired with the Web Bluetooth PWA at
- * https://github.com/HamzaYslmn/Esp-BLE-Web
+ * https://github.com/HamzaYslmn/Esp-BleDeck
  *
  * Wire protocol (one line per message, terminated by '\n'):
  *
@@ -28,6 +28,9 @@
  *   3. call ble.loop() from Arduino loop() (which is already a FreeRTOS
  *      task on ESP32) and yield with vTaskDelay so the BLE host stack
  *      can run.
+ *   4. optional: ble.command("relay1:TOGGLE") from firmware (physical
+ *      button, sensor, ...) takes the same path as an app write, so the
+ *      callback fires AND the connected app sees the new state.
  *
  * Header-only.
  */
@@ -51,14 +54,14 @@
 #include "BleTimer.h"
 #include "BleSeparator.h"
 
-class EspBleWeb : public BLEServerCallbacks, public BLECharacteristicCallbacks {
+class EspBleDeck : public BLEServerCallbacks, public BLECharacteristicCallbacks {
 public:
   static constexpr const char* DEFAULT_SVC_UUID  = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static constexpr const char* DEFAULT_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
-  ~EspBleWeb() {
+  ~EspBleDeck() {
     // Cleanup — only meaningful in tests; in real sketches the
-    // EspBleWeb instance is global and lives forever.
+    // EspBleDeck instance is global and lives forever.
     for (auto* w : _widgets) delete w;
     _widgets.clear();
     if (_busMutex) { vSemaphoreDelete(_busMutex); _busMutex = nullptr; }
@@ -125,6 +128,14 @@ public:
   void addSeparator(const char* id, const char* label = "") {
     add(new BleSeparator(id, label));
   }
+
+  // MARK: firmware-side control
+
+  /** Run "<id>:<action>" as if the app had written it: the widget's
+   *  callback fires and the reply / state line goes out to the app. */
+  void command(const String& line) { dispatch(line); }
+
+  bool isConnected() const { return _connected; }
 
   // MARK: output (sendLine)
 
@@ -305,7 +316,7 @@ private:
 
   BLECharacteristic* _chr            = nullptr;
   BLEAdvertising*    _adv            = nullptr;
-  bool               _connected      = false;
+  volatile bool      _connected      = false;   // written by BLE task, read by loop
   bool               _started        = false;
   volatile bool      _needsAdvertise = false;
   uint32_t           _advertiseAtMs  = 0;

@@ -1,7 +1,7 @@
-# BLE Relay PWA (React + Vite)
+# Esp-BleDeck PWA (React + Vite)
 
 Offline-first PWA that controls the ESP32 relay firmware in
-`../src/main/main.ino` over Web Bluetooth (Nordic UART Service).
+`../examples/BasicRelay/BasicRelay.ino` over Web Bluetooth (Nordic UART Service).
 
 ## Stack
 
@@ -23,6 +23,6 @@ desktop and Android. iOS Safari does not support it.
 
 ## Use
 
-1. Power up the ESP32 (advertises as `ESP32-Relay`).
+1. Power up the ESP32 (advertises as `ESP32-BleDeck`).
 2. Open the app, tap **Connect**, pick the device.
 3. Toggle relays. The ESP32 echoes a `STATUS` line and the UI syncs from it.

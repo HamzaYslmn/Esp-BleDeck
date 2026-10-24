@@ -1,7 +1,7 @@
 /*
  * BleTimer - cooperative countdown widget. No FreeRTOS task, no
  * semaphores, no per-instance mutex — the countdown advances from
- * EspBleWeb::loop() via the BleWidget::poll() hook.
+ * EspBleDeck::loop() via the BleWidget::poll() hook.
  *
  *   ble.addTimer("timer1", "Auto-off", 20*60, "relay1:OFF");
  *
@@ -18,9 +18,9 @@
  * On expiry the dispatch hook re-enters the bus with `<onComplete>`,
  * so a timer can drive any other widget by id (e.g. "relay1:OFF").
  *
- * Concurrency: handle() runs in the BLE host task under EspBleWeb's
+ * Concurrency: handle() runs in the BLE host task under EspBleDeck's
  * recursive bus mutex; poll() runs in the main loop task also under
- * the bus mutex (taken by EspBleWeb::loop). Therefore the fields
+ * the bus mutex (taken by EspBleDeck::loop). Therefore the fields
  * below are always touched by exactly one task at a time — no extra
  * locking needed inside this class.
  */
@@ -96,7 +96,7 @@ private:
   String   _activeOnComplete;    // override from current start command
   uint32_t _seconds = 0;         // catalog-time default duration
 
-  // Countdown state. Touched under EspBleWeb's bus mutex, never both
+  // Countdown state. Touched under EspBleDeck's bus mutex, never both
   // at once from two tasks, so no extra synchronisation here.
   int64_t _endUs      = 0;
   int64_t _nextTickUs = 0;

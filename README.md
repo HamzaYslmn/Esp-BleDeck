@@ -1,8 +1,8 @@
-# Esp32-BLE-Relay
+# Esp-BleDeck
 
 > Control an ESP32 from your phone or laptop over **Web Bluetooth** — no app store, no cloud, no Wi-Fi router. The PWA discovers the device's widgets at runtime, so adding a switch / slider / timer on the firmware automatically makes it appear in the UI.
 
-**Live PWA:** https://hamzayslmn.github.io/Esp-BLE-Web/
+**Live PWA:** https://hamzayslmn.github.io/Esp-BleDeck/
 
 ![alt text](img/image-1.png)
 ![alt text](img/image-2.png)
@@ -42,10 +42,10 @@
 │   │   ├── ble.ts                Web Bluetooth wrapper, MTU 247
 │   │   ├── store.ts              Zustand global state
 │   │   └── styles.css            Obsidian-style theme (Tailwind palette)
-│   ├── vite.config.ts            base: '/Esp-BLE-Web/' (GH Pages)
+│   ├── vite.config.ts            base: '/Esp-BleDeck/' (GH Pages)
 │   └── package.json
-├── src/                            EspBleWeb Arduino library (header-only)
-│   ├── EspBleWeb.h                 BLE server, widget registry, dispatcher
+├── src/                            EspBleDeck Arduino library (header-only)
+│   ├── EspBleDeck.h                 BLE server, widget registry, dispatcher
 │   ├── BleWidget.h                 Abstract base class for every widget
 │   ├── BleSwitch.h                 ON/OFF widget (callback)
 │   ├── BleButton.h                 Momentary press widget (callback)
@@ -118,16 +118,16 @@ widgets:end                                 # sentinel
 `examples/BasicRelay/BasicRelay.ino`:
 
 ```cpp
-#include <EspBleWeb.h>
+#include <EspBleDeck.h>
 
-#define DEVICE_NAME   "ESP32-BLE-Relay"
+#define DEVICE_NAME   "ESP32-BleDeck"
 #define ACTIVE_LEVEL  LOW           // active-LOW relay boards
 
 #define RELAY1_PIN    26
 #define RELAY2_PIN    25
 #define LED_PIN       2
 
-EspBleWeb ble;
+EspBleDeck ble;
 
 void setRelay(uint8_t pin, bool on) {
   digitalWrite(pin, on ? ACTIVE_LEVEL : !ACTIVE_LEVEL);
@@ -157,9 +157,8 @@ void setup() {
 }
 
 void loop() {
-  ble.loop();                       // serve advertising restarts
+  ble.loop();                       // advertising restarts + timer ticks
   vTaskDelay(pdMS_TO_TICKS(50));    // yield to BLE host + idle task
-  delay(10);                        // ESP idle-current saver, see Hackaday article
 }
 ```
 
@@ -176,15 +175,19 @@ ble.addButton(id, label, [](){ ... });
 ble.addSlider(id, label, /*min*/0, /*max*/255, /*initial*/0,
               [](int v){ analogWrite(PIN, v); });
 
-// Timers — own FreeRTOS task, fires `onComplete` line on the bus ---
+// Timers — ticked by ble.loop(), fire `onComplete` on the bus ------
 ble.addTimer(id, label, /*seconds*/20*60, /*onComplete*/"relay1:OFF");
 
 // Visual grouping --------------------------------------------------
 ble.addSeparator(id);                                 // thin divider
 ble.addSeparator(id, "Section title");                // titled rule
+
+// Firmware-side control — same path as an app write, so the app stays in sync
+ble.command("relay1:TOGGLE");                         // e.g. from a physical button
+ble.isConnected();
 ```
 
-Every widget inherits from `BleWidget` (see `BleWidget.h`). The control class keeps a single `std::vector<BleWidget*>` and routes incoming commands by id — there is **no per-kind capacity limit**, no `MAX_SWITCHES`/`MAX_TIMERS` constants. Add a new widget kind by writing one header that inherits from `BleWidget` and a one-line factory in `EspBleWeb.h`.
+Every widget inherits from `BleWidget` (see `BleWidget.h`). The control class keeps a single `std::vector<BleWidget*>` and routes incoming commands by id — there is **no per-kind capacity limit**, no `MAX_SWITCHES`/`MAX_TIMERS` constants. Add a new widget kind by writing one header that inherits from `BleWidget` and a one-line factory in `EspBleDeck.h`.
 
 ### Limits
 
@@ -192,17 +195,17 @@ None. Widgets are stored in a `std::vector<BleWidget*>` and grow as you register
 
 ### Install & flash
 
-**Option A — Library Manager (once published):** search for `EspBleWeb` in *Arduino IDE → Library Manager* and install.
+**Option A — Library Manager (once published):** search for `EspBleDeck` in *Arduino IDE → Library Manager* and install.
 
 **Option B — Local install:** clone this repo into your sketchbook's `libraries/` folder, e.g.
 ```
-~/Documents/Arduino/libraries/Esp-BLE-Web/
+~/Documents/Arduino/libraries/Esp-BleDeck/
 ```
 then restart the Arduino IDE.
 
-1. Open `examples/BasicRelay/BasicRelay.ino` (`File → Examples → EspBleWeb → BasicRelay` after install).
+1. Open `examples/BasicRelay/BasicRelay.ino` (`File → Examples → EspBleDeck → BasicRelay` after install).
 2. Make sure the **ESP32 boards package** is installed; pick your board + port.
-3. **Upload**, then open the Serial Monitor at 115200 to see `[BLE] Ready: ESP32-BLE-Relay`.
+3. **Upload**, then open the Serial Monitor at 115200 to see `[BLE] Ready: ESP32-BleDeck`.
 
 ---
 
@@ -210,7 +213,7 @@ then restart the Arduino IDE.
 
 ### Use the hosted version
 
-Just open https://hamzayslmn.github.io/Esp-BLE-Web/ in **Chrome / Edge / Opera** (Android, macOS, Windows, Linux). Tap **Connect**, pick `ESP32-BLE-Relay`, and the widgets appear automatically.
+Just open https://hamzayslmn.github.io/Esp-BleDeck/ in **Chrome / Edge / Opera** (Android, macOS, Windows, Linux). Tap **Connect**, pick `ESP32-BleDeck`, and the widgets appear automatically.
 
 > Web Bluetooth requires HTTPS or `localhost`, and a Chromium-based browser. iOS Safari does not support Web Bluetooth (use the Bluefy browser as a workaround).
 
@@ -220,7 +223,7 @@ Just open https://hamzayslmn.github.io/Esp-BLE-Web/ in **Chrome / Edge / Opera**
 cd frontend
 pnpm install
 pnpm dev          # http://localhost:5173 — Web Bluetooth works on localhost
-pnpm build        # production build into dist/, base = /Esp-BLE-Web/
+pnpm build        # production build into dist/, base = /Esp-BleDeck/
 pnpm preview      # serves the built dist/
 ```
 
@@ -248,7 +251,7 @@ Open the site in Chrome / Edge → menu → *Install app* (or *Add to Home Scree
 The `.github/workflows/static.yml` workflow:
 
 1. Triggers on `push` to `main` **only when the commit message contains `release`**, or on manual dispatch.
-2. Installs pnpm + Node 20, then builds `frontend/` (`vite build` sets `NODE_ENV=production`, which switches `base` to `/Esp-BLE-Web/`).
+2. Installs pnpm + Node 20, then builds `frontend/` (`vite build` sets `NODE_ENV=production`, which switches `base` to `/Esp-BleDeck/`).
 3. Uploads `frontend/dist/` and deploys it to the `github-pages` environment.
 
 To publish a new version:

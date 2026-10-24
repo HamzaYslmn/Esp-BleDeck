@@ -47,15 +47,25 @@
   --radius-sm: 0.4375rem;
   --card-h:    4.25rem;
 
-  --shadow-1:  0 1px 0 rgba(255,255,255,0.02) inset;
+  --shadow-1:  0 1px 0 rgba(255,255,255,0.03) inset;
+  --shadow-2:  0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.6);
+  --ease:      cubic-bezier(.4,.2,.2,1);
+  --mono:      ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, monospace;
 }
 
 * { box-sizing: border-box; }
 
+html { background: var(--bg); }
+body {
+  /* Soft violet glow from the top edge; fixed so it doesn't scroll. */
+  background:
+    radial-gradient(48rem 28rem at 50% -12rem, rgba(139, 92, 246, 0.16), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
 html, body, #root {
   margin: 0;
   height: 100%;
-  background: var(--bg);
   color: var(--fg);
   font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Inter", "Segoe UI", Roboto, sans-serif;
   font-feature-settings: "ss01", "cv11";
@@ -71,8 +81,9 @@ main {
   width: 100%;
   max-width: 32rem;
   margin: 0 auto;
-  padding: env(safe-area-inset-top, 0) clamp(0.75rem, 2vw, 1.25rem) env(safe-area-inset-bottom, 0);
-  overflow-x: hidden;
+  --gutter: clamp(0.75rem, 2vw, 1.25rem);
+  padding: env(safe-area-inset-top, 0) var(--gutter) env(safe-area-inset-bottom, 0);
+  overflow-x: clip;   /* clip, not hidden: hidden would break the sticky header */
 }
 
 main.center {
@@ -90,14 +101,34 @@ main.center {
   max-width: 24rem;
   padding: 2rem 1rem;
 }
+.welcome .logo {
+  border-radius: 1.25rem;
+  box-shadow: 0 0 0 1px var(--line), 0 18px 48px -12px var(--accent-ring);
+  animation: rise 0.5s var(--ease) both;
+}
 .welcome h1 {
-  margin: 0;
-  font-size: 1.65rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  color: var(--fg);
+  margin: 0.25rem 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  background: linear-gradient(180deg, var(--fg) 30%, var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .welcome p { margin: 0; color: var(--subtle); }
+.welcome > p:first-of-type { color: var(--muted); margin-top: -0.4rem; }
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0.5rem 0 0.25rem;
+}
+.welcome-actions button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 44px;
+}
 
 /* ---------------- buttons & inputs ---------------- */
 button, input {
@@ -112,11 +143,16 @@ button, input {
 }
 button {
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+              transform 0.1s var(--ease), box-shadow 0.15s ease;
 }
 button:hover  { background: var(--card-2); border-color: var(--line-2); }
-button:active { background: var(--bg-2); }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+button:active { background: var(--bg-2); transform: scale(0.98); }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.ghost:hover { background: var(--card); color: var(--fg); }
 input { background: var(--inset); }
 input:focus {
   outline: none;
@@ -125,10 +161,11 @@ input:focus {
 }
 
 .primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
   color: var(--accent-ink);
   border-color: var(--accent);
   font-weight: 600;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 8px 20px -8px var(--accent);
 }
 .primary:hover  { background: var(--accent-2); border-color: var(--accent-2); }
 .primary.tiny   { min-height: 0; padding: 0.25rem 0.65rem; font-size: 0.72rem; }
@@ -162,6 +199,11 @@ input:focus {
   border-color: color-mix(in oklab, var(--edit) 40%, var(--line));
 }
 .icon-btn.active:hover { background: color-mix(in oklab, var(--edit) 14%, transparent); }
+.icon-btn.danger-ghost:hover {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 12%, transparent);
+  border-color: color-mix(in oklab, var(--danger) 40%, var(--line));
+}
 
 /* ---------------- top bar ---------------- */
 .bar {
@@ -173,12 +215,51 @@ input:focus {
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
+.bar.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: nowrap;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0.7rem var(--gutter);
+  background: color-mix(in oklab, var(--bg) 80%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+}
 .bar-title {
+  display: flex; align-items: center; gap: 0.55rem;
+  min-width: 0;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--fg);
   letter-spacing: -0.01em;
 }
+.bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-dot {
+  flex: none;
+  width: 0.5rem; height: 0.5rem;
+  border-radius: 50%;
+  background: var(--edit-2);
+  box-shadow: 0 0 0 0 var(--edit-ring);
+  animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70%  { box-shadow: 0 0 0 0.45rem rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* ---------------- busy (connecting / disconnecting) ---------------- */
+.spinner {
+  width: 1.75rem; height: 1.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent-2);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 .bar-actions { display: flex; gap: 0.4rem; align-items: center; }
 
 .board-foot {
@@ -206,6 +287,11 @@ input:focus {
   display: flex;
 }
 .cell > * { flex: 1; min-width: 0; }
+.cell { animation: rise 0.35s var(--ease) both; }
+.cell:nth-child(2) { animation-delay: 30ms; }
+.cell:nth-child(3) { animation-delay: 60ms; }
+.cell:nth-child(4) { animation-delay: 90ms; }
+.cell:nth-child(n+5) { animation-delay: 120ms; }
 
 .cell.editable { cursor: pointer; }
 .cell.editable .card { pointer-events: none; }
@@ -229,16 +315,18 @@ input:focus {
   width: 100%;
   height: 100%;
   padding: 0.6rem 0.95rem;
-  background: var(--card);
+  background: linear-gradient(180deg, var(--card-2), var(--card) 70%);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--fg);
   text-align: left;
   gap: 0.85rem;
-  box-shadow: var(--shadow-1);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow: var(--shadow-2);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              transform 0.1s var(--ease), box-shadow 0.2s ease;
 }
-.card:hover { background: var(--card-2); border-color: var(--line-2); }
+.card:hover { border-color: var(--line-2); }
+button.card:active { transform: scale(0.985); background: var(--card); }
 
 .card-title {
   font-size: 0.875rem;
@@ -314,9 +402,14 @@ input:focus {
   border-radius: 50%;
   transition: transform 0.2s cubic-bezier(.4,.2,.2,1), background 0.2s ease;
 }
+.card-switch.on {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--line));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 14%, var(--card-2)), var(--card) 80%);
+}
 .card-switch.on .toggle {
   background: var(--accent);
   border-color: var(--accent);
+  box-shadow: 0 0 14px -2px var(--accent);
 }
 .card-switch.on .toggle-thumb {
   transform: translateX(1.25rem);
@@ -361,6 +454,7 @@ input:focus {
   width: 100%;
   height: 1.6rem;
   background: transparent;
+  border: 0;
   cursor: pointer;
   margin: 0;
   padding: 0;
@@ -430,7 +524,10 @@ input:focus {
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
-.card-timer.running { border-color: color-mix(in oklab, var(--accent) 50%, var(--line)); }
+.card-timer.running {
+  border-color: color-mix(in oklab, var(--accent) 50%, var(--line));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 10%, var(--card-2)), var(--card) 80%);
+}
 .card-timer.running .timer-value { color: var(--accent-2); }
 .card-timer.running .card-state  { color: var(--accent-2); }
 .timer-progress {
@@ -445,7 +542,8 @@ input:focus {
 .timer-progress > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 8px var(--accent);
   transition: width 0.5s linear;
 }
 
@@ -565,10 +663,13 @@ input:focus {
 }
 .separator-titled .separator-rule {
   flex: 1; height: 1px;
-  background: var(--line);
+  background: linear-gradient(90deg, transparent, var(--line-2));
+}
+.separator-titled .separator-rule:last-child {
+  background: linear-gradient(90deg, var(--line-2), transparent);
 }
 .separator-titled .separator-text {
-  color: var(--muted);
+  color: var(--accent-2);
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -578,8 +679,8 @@ input:focus {
 /* Brief flash when the device replied :Denied */
 .denied { animation: deny-flash 0.6s ease; }
 @keyframes deny-flash {
-  0%, 100% { box-shadow: var(--shadow-1); }
-  50%      { box-shadow: 0 0 0 1px var(--danger) inset; }
+  0%, 100% { box-shadow: var(--shadow-2); }
+  50%      { box-shadow: 0 0 0 1px var(--danger) inset, 0 0 18px -4px var(--danger); }
 }
 
 /* ---------------- install ---------------- */
@@ -598,12 +699,15 @@ input:focus {
   z-index: 100;
   overflow-y: auto;
 }
+.modal-backdrop { animation: fade 0.15s ease both; }
 .modal {
   width: 100%;
   max-width: 28rem;
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: 0 24px 64px -16px rgba(0,0,0,0.7);
+  animation: rise 0.2s var(--ease) both;
   display: flex; flex-direction: column;
   padding: 0 1rem 1rem;
 }
@@ -648,10 +752,16 @@ code { font-size: 0.85em; background: var(--card); padding: 0.1em 0.3em; border-
 }
 .settings-fab:hover { color: var(--fg); }
 
+@keyframes fade { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 /* ============ MOBILE ============ */
 @media (max-width: 480px) {
   :root { --card-h: 4rem; }
-  main { padding: env(safe-area-inset-top, 0) 0.5rem env(safe-area-inset-bottom, 0); }
+  main { --gutter: 0.5rem; }
   .grid { gap: 0.35rem; padding: 0.55rem 0; }
 
   .card { padding: 0.5rem 0.75rem; gap: 0.6rem; }
