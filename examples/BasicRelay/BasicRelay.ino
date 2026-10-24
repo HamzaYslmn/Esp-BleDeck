@@ -43,8 +43,6 @@ void setup() {
   pinMode(LED_PIN,    OUTPUT); analogWrite(LED_PIN, 0);
   pinMode(BOOT_PIN,   INPUT_PULLUP);
 
-  ble.begin(DEVICE_NAME);
-
   // Catalog lines are broadcast in insertion order, so separators
   // visually group widgets in the PWA.
   ble.addSeparator("sec1", "Relays");
@@ -56,6 +54,8 @@ void setup() {
 
   ble.addSeparator("sec3", "Timers");
   ble.addTimer    ("timer1", "Auto-off", 20 * 60, "relay1:TOGGLE");
+
+  ble.begin(DEVICE_NAME);   // after the widgets, so the log shows the real count
 }
 
 void loop() {

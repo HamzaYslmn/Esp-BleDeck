@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { autoReconnectAvailable, type KnownDevice } from './ble';
+import { BluetoothIcon, XIcon } from './icons';
 import { useApp } from './store';
 
 interface Props {
@@ -31,18 +33,26 @@ export function Settings({ onClose, onConnect }: Props) {
     forgetAll();
   };
 
+  // Escape closes the sheet, like any other dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <header className="bar">
-          <strong>Settings</strong>
-          <button onClick={onClose}>Close</button>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"
+           onClick={(e) => e.stopPropagation()}>
+        <header className="modal-head">
+          <h2 id="settings-title">Settings</h2>
+          <button className="icon-btn" onClick={onClose} aria-label="Close" title="Close"><XIcon /></button>
         </header>
 
         <section className="modal-body">
           <h3>Paired devices</h3>
           {known.length === 0 && (
-            <p className="muted">No paired devices yet.</p>
+            <p className="muted small">No paired devices yet. Connect one from the start screen.</p>
           )}
           {known.length > 0 && (
             <ul className="device-list">
@@ -50,18 +60,19 @@ export function Settings({ onClose, onConnect }: Props) {
                 const isCurrent = conn?.name === d.name;
                 return (
                   <li key={d.id} className="device-row">
+                    <span className={`device-avatar ${isCurrent ? 'live' : ''}`}><BluetoothIcon /></span>
                     <div className="device-info">
-                      <div className="device-name">
-                        {d.name} {isCurrent && <span className="muted">(connected)</span>}
+                      <div className="device-name">{d.name}</div>
+                      <div className="muted small">
+                        {isCurrent ? <span className="badge">Connected</span> : `Last seen ${fmtAge(d.lastSeen)}`}
                       </div>
-                      <div className="muted small">Last seen {fmtAge(d.lastSeen)}</div>
                     </div>
                     <div className="device-actions">
                       {silent && !isCurrent && (
-                        <button onClick={() => onConnect(d.id)}>Connect</button>
+                        <button className="tiny" onClick={() => onConnect(d.id)}>Connect</button>
                       )}
                       <button
-                        className="danger"
+                        className="tiny danger-text"
                         onClick={() => handleForget(d)}
                         disabled={isCurrent}
                         title={isCurrent ? 'Disconnect first' : 'Forget device'}
@@ -75,20 +86,18 @@ export function Settings({ onClose, onConnect }: Props) {
             </ul>
           )}
 
-          {known.length > 0 && (
+          {known.length > 1 && (
             <div className="modal-footer">
-              <button className="danger" onClick={handleForgetAll}>
+              <button className="tiny danger-text" onClick={handleForgetAll}>
                 Forget all devices
               </button>
             </div>
           )}
 
           {!silent && (
-            <p className="muted small">
-              For one-tap auto-reconnect to a saved device, enable
-              <br />
-              <code>chrome://flags/#enable-experimental-web-platform-features</code>
-              <br />
+            <p className="notice">
+              For one-tap reconnect to a saved device, enable{' '}
+              <code>chrome://flags/#enable-experimental-web-platform-features</code>{' '}
               and restart your browser.
             </p>
           )}

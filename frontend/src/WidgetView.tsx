@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { ClockIcon, GaugeIcon, PlayIcon, PowerIcon, StopIcon, ZapIcon } from './icons';
 import { useApp } from './store';
 import type { WidgetSpec } from './widgets';
+
+// Short tap feedback on phones; no-op where vibration is unsupported.
+const haptic = () => { navigator.vibrate?.(8); };
 
 interface Props {
   spec:    WidgetSpec;
@@ -40,17 +44,19 @@ function SwitchCard({ spec, send }: Props) {
   const on = state === 'ON';
   return (
     <button
-      className={`card card-switch ${on ? 'on' : ''} ${denied ? 'denied' : ''}`}
-      onClick={() => void send(`${spec.id}:${on ? 'OFF' : 'ON'}`)}
+      className={`card tile card-switch ${on ? 'on' : ''} ${denied ? 'denied' : ''}`}
+      role="switch"
+      aria-checked={on}
+      onClick={() => { haptic(); void send(`${spec.id}:${on ? 'OFF' : 'ON'}`); }}
     >
-      <div className="card-title">{spec.label}</div>
-      <div className="toggle" aria-pressed={on}>
-        <span className="toggle-thumb" />
-      </div>
-      <div className="card-foot">
-        <span className="card-id">{spec.id}</span>
-        <span className="card-state">{on ? 'ON' : 'OFF'}</span>
-      </div>
+      <span className="tile-top">
+        <span className="tile-icon"><PowerIcon /></span>
+        <span className="toggle" aria-hidden="true"><span className="toggle-thumb" /></span>
+      </span>
+      <span className="tile-text">
+        <span className="card-title">{spec.label}</span>
+        <span className="card-state">{on ? 'On' : 'Off'}</span>
+      </span>
     </button>
   );
 }
@@ -61,15 +67,16 @@ function ButtonCard({ spec, send }: Props) {
   const action = spec.action ?? 'ON';
   return (
     <button
-      className={`card card-button ${denied ? 'denied' : ''}`}
-      onClick={() => void send(`${spec.id}:${action}`)}
+      className={`card tile card-button ${denied ? 'denied' : ''}`}
+      onClick={() => { haptic(); void send(`${spec.id}:${action}`); }}
     >
-      <div className="card-title">{spec.label}</div>
-      <div className="press-pad">TAP</div>
-      <div className="card-foot">
-        <span className="card-id">{spec.id}</span>
-        <span className="card-state">{action}</span>
-      </div>
+      <span className="tile-top">
+        <span className="tile-icon"><ZapIcon /></span>
+      </span>
+      <span className="tile-text">
+        <span className="card-title">{spec.label}</span>
+        <span className="card-state">Tap to run</span>
+      </span>
     </button>
   );
 }
@@ -119,13 +126,18 @@ function SliderCard({ spec, send }: Props) {
 
   return (
     <div className={`card card-slider ${denied ? 'denied' : ''}`}>
-      <div className="card-title">{spec.label}</div>
+      <div className="card-row">
+        <span className="tile-icon"><GaugeIcon /></span>
+        <span className="card-title">{spec.label}</span>
+        <span className="slider-value">{local}</span>
+      </div>
       <input
         className="slider-input"
         type="range"
         min={min}
         max={max}
         value={local}
+        aria-label={spec.label}
         style={{ '--pct': `${pct}%` } as React.CSSProperties}
         onPointerDown={() => { dragging.current = true; }}
         onPointerUp={()   => { dragging.current = false; }}
@@ -135,10 +147,7 @@ function SliderCard({ spec, send }: Props) {
           scheduleSend(v);
         }}
       />
-      <div className="card-foot">
-        <span className="card-id">{spec.id}</span>
-        <span className="card-state">{local}</span>
-      </div>
+      <div className="slider-scale" aria-hidden="true"><span>{min}</span><span>{max}</span></div>
     </div>
   );
 }
@@ -159,41 +168,38 @@ function TimerCard({ spec, send }: Props) {
     : 0;
 
   return (
-    <button
-      className={`card card-timer ${running ? 'running' : ''} ${denied ? 'denied' : ''}`}
-      onClick={() => void send(running ? `${spec.id}:cancel` : startCmd)}
-    >
-      <div className="card-head">
-        <div className="card-title">{spec.label}</div>
-        {onCompleteCmd && (
-          <div className="card-sub" title="Sent when the countdown reaches zero (set on the device)">
-            <span className="card-sub-icon">→</span>
-            <span className="card-sub-cmd">{onCompleteCmd}</span>
-          </div>
-        )}
-      </div>
-      <div className="timer-value">{formatHMS(running ? remaining! : seconds)}</div>
-      <div className="card-foot">
-        <span className="card-id">{spec.id}</span>
-        <span className="card-state">{running ? 'TAP TO CANCEL' : 'TAP TO START'}</span>
+    <div className={`card card-timer ${running ? 'running' : ''} ${denied ? 'denied' : ''}`}>
+      <div className="card-row">
+        <span className="tile-icon"><ClockIcon /></span>
+        <span className="tile-text">
+          <span className="card-title">{spec.label}</span>
+          {onCompleteCmd && (
+            <span className="card-sub" title="Sent when the countdown reaches zero (set on the device)">
+              then {onCompleteCmd}
+            </span>
+          )}
+        </span>
+        <span className="timer-value">{formatHMS(running ? remaining! : seconds)}</span>
+        <button
+          className={`round-btn ${running ? 'stop' : ''}`}
+          aria-label={running ? 'Cancel timer' : 'Start timer'}
+          title={running ? 'Cancel' : 'Start'}
+          onClick={() => { haptic(); void send(running ? `${spec.id}:cancel` : startCmd); }}
+        >
+          {running ? <StopIcon /> : <PlayIcon />}
+        </button>
       </div>
       {running && (
         <span className="timer-progress"><span style={{ width: `${pct}%` }} /></span>
       )}
-    </button>
+    </div>
   );
 }
 
 /* ---------------- Separator ---------------- */
 function SeparatorCard({ spec }: Props) {
   if (!spec.label) return <hr className="separator-line" />;
-  return (
-    <div className="separator-titled">
-      <span className="separator-rule" />
-      <span className="separator-text">{spec.label}</span>
-      <span className="separator-rule" />
-    </div>
-  );
+  return <h2 className="section-title">{spec.label}</h2>;
 }
 
 function formatHMS(total: number): string {
@@ -241,7 +247,7 @@ export function RenameCard({
       />
       <div className="card-foot">
         <span className="card-id">{id}</span>
-        <span className="card-state">auto-saved</span>
+        <button className="edit-done tiny" onClick={onCommit}>Done</button>
       </div>
     </div>
   );

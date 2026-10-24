@@ -143,8 +143,6 @@ void setup() {
   pinMode(RELAY2_PIN, OUTPUT); setRelay(RELAY2_PIN, false);
   pinMode(LED_PIN,    OUTPUT); analogWrite(LED_PIN, 0);
 
-  ble.begin(DEVICE_NAME);
-
   ble.addSeparator("sec1", "Relays");
   ble.addSwitch   ("relay1", "Lamp", onRelay1);
   ble.addSwitch   ("relay2", "Fan",  onRelay2);
@@ -154,6 +152,8 @@ void setup() {
 
   ble.addSeparator("sec3", "Timers");
   ble.addTimer    ("timer1", "Auto-off", 20 * 60, "relay1:OFF");
+
+  ble.begin(DEVICE_NAME);
 }
 
 void loop() {

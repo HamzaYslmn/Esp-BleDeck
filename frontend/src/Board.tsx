@@ -61,17 +61,30 @@ export function Board({ deviceName, send }: Props) {
   if (!catalogReady && catalog.length === 0) {
     return (
       <section className="center" style={{ flex: 1 }}>
-        <p className="muted">Reading widget catalog from device…</p>
+        <div className="spinner" aria-hidden="true" />
+        <p className="muted">Loading controls…</p>
       </section>
     );
   }
 
-  // Visible widget count (separators don't count toward "how many widgets").
-  const widgetCount = catalog.filter((w) => w.kind !== 'separator').length;
+  if (catalog.length === 0) {
+    return (
+      <section className="center" style={{ flex: 1 }}>
+        <p className="empty-title">No controls yet</p>
+        <p className="muted small">
+          Add widgets in the sketch with <code>ble.addSwitch(…)</code> and friends,
+          then reconnect.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <>
       <section className={`grid ${editing ? 'editing' : ''}`}>
+        {editing && (
+          <p className="edit-banner" role="status">Tap a widget to rename it. Changes save automatically.</p>
+        )}
         {catalog.map((spec) => {
           const isSep    = spec.kind === 'separator';
           const display: WidgetSpec = {
@@ -83,7 +96,7 @@ export function Board({ deviceName, send }: Props) {
 
           if (isSelected && spec.kind === 'timer') {
             return (
-              <div key={spec.id} className="cell cell-edit-timer">
+              <div key={spec.id} className="cell cell-edit">
                 <EditTimerCard
                   id={spec.id}
                   originalLabel={spec.label}
@@ -100,7 +113,7 @@ export function Board({ deviceName, send }: Props) {
           }
           if (isSelected) {
             return (
-              <div key={spec.id} className="cell">
+              <div key={spec.id} className="cell cell-edit">
                 <RenameCard
                   id={spec.id}
                   original={spec.label}
@@ -115,22 +128,20 @@ export function Board({ deviceName, send }: Props) {
           return (
             <div
               key={spec.id}
-              className={`cell ${isSep ? 'cell-separator' : ''} ${editable ? 'editable' : ''}`}
-              onClick={editable ? () => setSelected(spec.id) : undefined}
+              className={`cell cell-${spec.kind} ${editable ? 'editable' : ''}`}
+              {...(editable && {
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': `Rename ${display.label || spec.id}`,
+                onClick: () => setSelected(spec.id),
+                onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(spec.id); } },
+              })}
             >
               <WidgetCard spec={display} send={send} />
             </div>
           );
         })}
       </section>
-
-      <footer className="bar board-foot">
-        <small className="muted">
-          {editing
-            ? 'Tap a card to rename it'
-            : `${widgetCount} widget${widgetCount === 1 ? '' : 's'}`}
-        </small>
-      </footer>
     </>
   );
 }

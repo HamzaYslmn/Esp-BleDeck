@@ -7,32 +7,13 @@ import {
   type Connection,
 } from './ble';
 import { Board } from './Board';
+import { BluetoothIcon, CheckIcon, GearIcon, PencilIcon, PowerIcon } from './icons';
 import { InstallButton } from './InstallButton';
 import { Settings } from './Settings';
 import { useApp } from './store';
 
 const APP_TITLE = 'BleDeck';
 const LOGO = `${import.meta.env.BASE_URL}icon.svg`;
-
-// MARK: icons (inline, lucide-style strokes; no icon dependency)
-function Icon({ children }: { children: React.ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
-const GearIcon = () => (
-  <Icon>
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-    <circle cx="12" cy="12" r="3" />
-  </Icon>
-);
-const PencilIcon    = () => <Icon><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></Icon>;
-const CheckIcon     = () => <Icon><path d="M20 6 9 17l-5-5" /></Icon>;
-const BluetoothIcon = () => <Icon><path d="m7 7 10 10-5 5V2l5 5L7 17" /></Icon>;
-const PowerIcon     = () => <Icon><path d="M12 2v10" /><path d="M18.4 6.6a9 9 0 1 1-12.77.04" /></Icon>;
 
 function Busy({ text }: { text: string }) {
   return (
@@ -130,6 +111,16 @@ export function App() {
     };
   }, [conn]);
 
+  // Closing the device picker is a choice, not an error; other failures
+  // get a plain-language line instead of the raw DOMException text.
+  const showError = (e: unknown) => {
+    const err = e as DOMException;
+    if (err.name === 'NotFoundError' && /cancel/i.test(err.message)) return;
+    if (err.name === 'NetworkError') setError('Could not reach the device. Is it powered on and in range?');
+    else if (err.name === 'SecurityError') setError('Bluetooth is blocked for this site. Allow it in the browser settings.');
+    else setError(err.message || 'Connection failed.');
+  };
+
   const handleScan = async () => {
     setError(null);
     await ensureNotificationPermission();
@@ -138,7 +129,7 @@ export function App() {
       await adoptConnection(c);
       notify(APP_TITLE, `Connected to ${c.name}`);
     } catch (e) {
-      setError((e as Error).message);
+      showError(e);
     }
   };
 
@@ -153,7 +144,7 @@ export function App() {
       await adoptConnection(c);
       notify(APP_TITLE, `Connected to ${c.name}`);
     } catch (e) {
-      setError((e as Error).message);
+      showError(e);
     }
   };
 
@@ -178,7 +169,7 @@ export function App() {
     return (
       <>
         <button
-          className="settings-fab"
+          className="icon-btn settings-fab"
           onClick={() => setShowSettings(true)}
           aria-label="Settings"
           title="Settings"
@@ -213,23 +204,24 @@ export function App() {
                 </button>
               )}
             </div>
-            <p className="muted small">
-              Looks for any nearby BLE device. ESP32 boards starting with{' '}
-              <strong>{ESP_NAME_PREFIX}</strong> get a ready-made control board.
+            <p className="hint">
+              Pick your board from the browser's device list. Boards named{' '}
+              <strong>{ESP_NAME_PREFIX}</strong> show their controls automatically.
             </p>
+            {error && <p className="notice notice-error" role="alert">{error}</p>}
             {!navigator.bluetooth && (
-              <p className="muted">Web Bluetooth not available in this browser.</p>
+              <p className="notice">
+                This browser has no Web Bluetooth. Use Chrome, Edge or Opera on
+                desktop or Android.
+              </p>
             )}
             {navigator.bluetooth && lastDevice && !autoReconnectAvailable() && (
-              <p className="muted">
-                For one-tap auto-reconnect, enable
-                <br />
-                <code>chrome://flags/#enable-experimental-web-platform-features</code>
-                <br />
+              <p className="notice">
+                For one-tap reconnect, enable{' '}
+                <code>chrome://flags/#enable-experimental-web-platform-features</code>{' '}
                 and restart the browser.
               </p>
             )}
-            {error && <p className="error">{error}</p>}
             <InstallButton />
           </div>
         </main>
